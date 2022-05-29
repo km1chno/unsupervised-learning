@@ -2,69 +2,78 @@ import numpy as np
 from matplotlib import pyplot as plt
 from sortedcontainers import SortedList
 
-INF = 10**10
-
-metrics = [
-    lambda x, z: np.linalg.norm(x-z)
-]
-
-colors = ["#00bfa0", "#0c06bf", "#bf0606", "#12bf06", "#bf06bf", "#b9bf06", "#06b3bf", "#000000", "#b3d4ff"]
+def dist(x, z):
+    return np.linalg.norm(x-z)
 
 class HierarchicalClustering: 
-    def __init__(self, X, y):
+    def __init__(self, X):
         self.X = np.copy(X)
-        self.y = np.copy(y)
+
+    def scale_data(self):
+        v = np.asarray(np.var(self.X, axis = 0)).flatten()
+        m = np.asarray(np.mean(self.X, axis = 0)).flatten()
+        for j in range(0, self.n):
+            self.X[:, j] = (self.X[:, j] - m[j]) / np.sqrt(v[j])
 
     def get_coeffs(self, x, y, method):
-        return 1/2, 1/2, 0, -1/2
+        a = self.cluster_size[x]
+        b = self.cluster_size[y]
+        c = a+b
+        if method == 0:     #single
+            return 1/2, 1/2, 0, -1/2
+        elif method == 1:   #complete
+            return 1/2, 1/2, 0, 1/2
+        elif method == 2:   #average
+            return a/(a+b), b/(a+b), 0, 0
+        elif method == 3:   #centroid
+            return a/(a+b), b/(a+b), (-a*b)/((a+b)**2), 0
+        elif method == 4:   #ward 
+            return (a+c)/(a+b+c), (b+c)/(a+b+c), (-c)/(a+b+c), 0
+            
 
-    def doit(self, metric, method, nclusters):
-        metric_func = metrics[metric]
+    def doit(self, method, nclusters):
+        self.nclusters = nclusters
         self.m = self.X.shape[0]
-        self.D = np.zeros((2*self.m, 2*self.m), dtype=float)
-        cluster_id = np.zeros(self.m, dtype=int)
-        self.deleted = np.zeros(2*self.m)
-
+        self.n = self.X.shape[1]
+        D = np.zeros((2*self.m, 2*self.m), dtype=float)
+        self.cluster_size = np.ones(2*self.m)
+        self.cluster_id = np.zeros(self.m, dtype=int)
+        deleted = np.zeros(2*self.m)
         dist_sorted = SortedList()
-        for i in range(self.m):
-            cluster_id[i] = i
-            for j in range(i+1, self.m):
-                print(f'init pair ({i}, {j})')
 
-                self.D[i][j] = self.D[j][i] = metric_func(self.X[i], self.X[j])
-                dist_sorted.add((self.D[i][j], i, j))
+        self.scale_data()
+        
+        print(f'initialization...')
+        for i in range(self.m):
+            self.cluster_id[i] = i
+            for j in range(i+1, self.m):
+                print(f'init {i} {j}')
+                d = dist(self.X[i], self.X[j])
+                if method == 4:
+                    d = d**2
+                D[i][j] = D[j][i] = d
+                dist_sorted.add((D[i][j], i, j))
 
         for k in range(self.m, 2*self.m - nclusters):
             print(f'combining clusters {k-self.m}/{self.m-nclusters-1}')
 
             smallest_dist, x, y = dist_sorted[0]
             dist_sorted.discard((smallest_dist, x, y))
+            self.cluster_size[k] = self.cluster_size[x] + self.cluster_size[y]
             ax, ay, b, g = self.get_coeffs(x, y, method)
             for i in range(k):
-                if i != x and i != y and self.deleted[i] == 0:
-                    dist_sorted.discard((self.D[i][x], i, x))
-                    dist_sorted.discard((self.D[i][x], x, i))
-                    dist_sorted.discard((self.D[i][y], i, y))
-                    dist_sorted.discard((self.D[i][y], y, i))
-                    self.D[i][k] = self.D[k][i] = ax*self.D[i][x] + ay*self.D[i][y] + b*self.D[x][y] + g*np.abs(self.D[i][x] - self.D[i][y])
-                    dist_sorted.add((self.D[i][k], i, k))
-            self.deleted[x] = self.deleted[y] = 1
-            cluster_id[(cluster_id == y)|(cluster_id == x)] = k
+                if i != x and i != y and deleted[i] == 0:
+                    dist_sorted.discard((D[i][x], i, x))
+                    dist_sorted.discard((D[i][x], x, i))
+                    dist_sorted.discard((D[i][y], i, y))
+                    dist_sorted.discard((D[i][y], y, i))
+                    D[i][k] = D[k][i] = ax*D[i][x] + ay*D[i][y] + b*D[x][y] + g*np.abs(D[i][x] - D[i][y])
+                    dist_sorted.add((D[i][k], i, k))
+            deleted[x] = deleted[y] = 1
+            self.cluster_id[(self.cluster_id == y)|(self.cluster_id == x)] = k
 
-        fig, ax = plt.subplots(1, 1, figsize=(16,9), dpi= 80)
-        plt.gca().spines["top"].set_alpha(0)
-        plt.gca().spines["bottom"].set_alpha(.3)
-        plt.gca().spines["right"].set_alpha(0)
-        plt.gca().spines["left"].set_alpha(.3)
-        plt.grid()
-
-        next_color = 1
-        cluster_color = np.zeros(2*self.m-nclusters, dtype=int)
+        scale_array = np.sort(np.unique(self.cluster_id))
         for i in range(self.m):
-            if cluster_color[cluster_id[i]] == 0:
-                cluster_color[cluster_id[i]] = next_color
-                next_color += 1
-            ax.scatter(self.X[i][0], self.X[i][1], color=colors[cluster_color[cluster_id[i]]])
+            self.cluster_id[i] = np.where(scale_array == self.cluster_id[i])[0]
 
-        plt.show()
-        
+        return self.X, self.cluster_id
