@@ -41,47 +41,6 @@ colors = [
     "#ffb6c1" #lightpink
 ]
 
-"""
-colors = [
-    "#7f0000",
-    "#006400",
-    "#808000",
-    "#483d8b",
-    "#008080",
-    "#4682b4",
-    "#9acd32",
-    "#00008b",
-    "#32cd32",
-    "#daa520",
-    "#8fbc8f",
-    "#8b008b",
-    "#b03060",
-    "#d2b48c",
-    "#ff4500",
-    "#00ced1",
-    "#ff8c00",
-    "#ffff00",
-    "#00ff00",
-    "#00fa9a",
-    "#8a2be2",
-    "#dc143c",
-    "#f4a460",
-    "#0000ff",
-    "#adff2f",
-    "#da70d6",
-    "#ff00ff",
-    "#1e90ff",
-    "#f0e68c",
-    "#fa8072",
-    "#dda0dd",
-    "#87ceeb",
-    "#ff1493",
-    "#7b68ee",
-    "#7fffd4",
-    "#ffb6c1"
-]
-"""
-
 def calc_classification_error(X, y, clustering):
     m = X.shape[0]
     good = 0
@@ -101,33 +60,50 @@ method_subtitle = [
     "(Ward)"
 ]
 
+spectral_methods = [
+    [0, 0, 0, lambda x : 1/x if x != 0 else 0],
+    [0, 0, 0, lambda x : np.exp(-(x**2)/(0.01**2))],
+    [0, 0, 0, lambda x : np.exp(-(x**2)/(0.1**2))],
+    [0, 0, 0, lambda x : np.exp(-(x**2)/(0.5**2))],
+    [0, 0, 0, lambda x : np.exp(-(x**2)/(1**2))],
+    [0, 0, 0, lambda x : np.exp(-(x**2)/(10**2))],
+    [1, 0.1, 0, lambda x : 1/x if x != 0 else 0],
+    [1, 0.2, 0, lambda x : 1/x if x != 0 else 0],
+    [1, 0.3, 0, lambda x : 1/x if x != 0 else 0],
+    [1, 0.5, 0, lambda x : 1/x if x != 0 else 0],
+    [1, 0.7, 0, lambda x : 1/x if x != 0 else 0],
+    [2, 0, 3, lambda x : 1/x if x != 0 else 0],
+    [2, 0, 5, lambda x : 1/x if x != 0 else 0],
+    [2, 0, 10, lambda x : 1/x if x != 0 else 0],
+    [2, 0, 3, lambda x : np.exp(-(x**2)/(0.5**2))],
+    [2, 0, 5, lambda x : np.exp(-(x**2)/(0.5**2))],
+    [2, 0, 10, lambda x : np.exp(-(x**2)/(0.5**2))]
+]
+
+
 def test_hierarchical(X, y, method, nclusters):
     hcluster = HierarchicalClustering(X)
     scaled_X, clustering = hcluster.doit(method, nclusters)
     m = X.shape[0]
 
-    return scaled_X, clustering, calc_classification_error(X, y, clustering)
+    actual_clusters = np.amax(y) - np.amin(y) + 1
 
     fig = plt.figure(figsize = (12, 6), dpi= 80)
     cx = fig.add_subplot(1, 2, 1)
     for j in range(m):
         cx.scatter(scaled_X[j][0], scaled_X[j][1], color=colors[clustering[j]])
-
     cx.set_title("Hierarchical Clustering for " + str(nclusters) + " clusters " + method_subtitle[method])
 
     dx = fig.add_subplot(1, 2, 2)
     for j in range(m):
         dx.scatter(scaled_X[j][0], scaled_X[j][1], color=colors[int(y[j])-1])
-    real_clusters = int(np.amax(y) - np.amin(y)) + 1
-    dx.set_title("Actual classification for " + str(real_clusters) + " clusters")
-
-    print(f'classification error: {calc_classification_error(X, y, clustering)}')
+    dx.set_title("Actual classification for " + str(actual_clusters) + " clusters")
 
     fig.tight_layout()
     plt.show()
 
 
-def test_kmeans(X, y, min_clusters, max_clusters, file, image):
+def test_kmeans(X, y, min_clusters, max_clusters):
     kmeans = KMeansClustering(X)
     m = X.shape[0]
     n = X.shape[1]
@@ -162,10 +138,7 @@ def test_kmeans(X, y, min_clusters, max_clusters, file, image):
     dx.set_title("Actual classification for " + str(real_clusters) + " clusters")
     
     fig.tight_layout()
-
-    plt.savefig(image)
-    file.write(f'classification error for kmeans: {calc_classification_error(X, y, clustering)}\n')
-    #plt.show()
+    plt.show()
 
 
 def test_spectral(X, y, graph_method, min_clusters=2, max_clusters=8, max_dist=0, neighbors=0, weight_function=0):
@@ -178,13 +151,8 @@ def test_spectral(X, y, graph_method, min_clusters=2, max_clusters=8, max_dist=0
     )
 
     max_val = np.amax(A)
+    fig = plt.figure(figsize = (12,12), dpi= 80)
 
-   # return calc_classification_error(X, y, clustering)
-    #return scaled_X, calc_classification_error(X, y, clustering), k
-
-    fig = plt.figure(figsize = (12,6), dpi= 80)
-
-    """
     ax = fig.add_subplot(2, 2, 1)
     ax.plot(range(min_clusters, max_clusters+1), smallest_error, color="#8a2be2")
     for i in range(min_clusters, max_clusters+1):
@@ -198,14 +166,13 @@ def test_spectral(X, y, graph_method, min_clusters=2, max_clusters=8, max_dist=0
         bx.scatter(i, sil[i-min_clusters], s=80, color="#8a2be2")
     bx.set_title("k-means++ silhouette coeffs after spectral")
     bx.xaxis.set_major_locator(MaxNLocator(integer=True))
-    """
 
-    cx = fig.add_subplot(1, 2, 1)
+    cx = fig.add_subplot(2, 2, 3)
     for j in range(m):
-        cx.scatter(scaled_X[j][0], scaled_X[j][1], color=colors[clustering[j]])
+        cx.scatter(scaled_X[j][0], scaled_X[j][1], color=colors[clustering[j] % 31])
     cx.set_title(f"spectral for {k} clusters")
-   
-    dx = fig.add_subplot(1, 2, 2)
+    
+    dx = fig.add_subplot(2, 2, 4)
     for j in range(m):
         dx.scatter(scaled_X[j][0], scaled_X[j][1], color="#8a2be2")
     for i in range(m):
@@ -221,7 +188,7 @@ def test_spectral(X, y, graph_method, min_clusters=2, max_clusters=8, max_dist=0
         dx.set_title(f"similarity graph for epsilon < {max_dist}")
     elif graph_method == 2:
         dx.set_title(f"similarity graph for {neighbors} nearest neighbors")
-
+    
     fig.tight_layout()
     plt.show()
 
@@ -231,29 +198,10 @@ i = sys.argv[1]
 data = np.loadtxt(f"data/dane_2D_{i}.txt", dtype = float)
 X, y = np.split(data, [2], axis = 1)
 
-real_clusters = int(np.amax(y) - np.amin(y)) + 1
-
 plt.rcParams['axes.grid'] = True
 
-spectral_methods = [
-    [0, 0, 0, lambda x : 1/x if x != 0 else 0],
-    [0, 0, 0, lambda x : np.exp(-(x**2)/(0.01**2))],
-    [0, 0, 0, lambda x : np.exp(-(x**2)/(0.1**2))],
-    [0, 0, 0, lambda x : np.exp(-(x**2)/(0.5**2))],
-    [0, 0, 0, lambda x : np.exp(-(x**2)/(1**2))],
-    [0, 0, 0, lambda x : np.exp(-(x**2)/(10**2))],
-    [1, 0.1, 0, lambda x : 1/x if x != 0 else 0],
-    [1, 0.2, 0, lambda x : 1/x if x != 0 else 0],
-    [1, 0.3, 0, lambda x : 1/x if x != 0 else 0],
-    [1, 0.5, 0, lambda x : 1/x if x != 0 else 0],
-    [1, 0.7, 0, lambda x : 1/x if x != 0 else 0],
-    [2, 0, 3, lambda x : 1/x if x != 0 else 0],
-    [2, 0, 5, lambda x : 1/x if x != 0 else 0],
-    [2, 0, 10, lambda x : 1/x if x != 0 else 0],
-    [2, 0, 3, lambda x : np.exp(-(x**2)/(0.5**2))],
-    [2, 0, 5, lambda x : np.exp(-(x**2)/(0.5**2))],
-    [2, 0, 10, lambda x : np.exp(-(x**2)/(0.5**2))]
-]
-
+test_kmeans(X, y, 2, 10)
+test_hierarchical(X, y, 0, 5)
+test_spectral(X, y, 1, max_dist=0.35)
 
 

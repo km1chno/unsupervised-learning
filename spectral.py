@@ -28,7 +28,6 @@ class SpectralClustering:
             self.X[:, j] = (self.X[:, j] - m[j]) / np.sqrt(v[j])
 
     def doit(self, graph_method, min_clusters=2, max_clusters=5, weight_function=dist_inv, max_dist=0, neighbors=0):
-        #self.w_func = w_funcs[weight_function]
         self.n = self.X.shape[1]
         self.m = self.X.shape[0]
         self.scale_data()
@@ -68,27 +67,6 @@ class SpectralClustering:
 
         print(f'Calculating eigenvalues and eigenvectors of laplacian...')
         eigenvalues, eigenvectors = np.linalg.eigh(L_norm)
-        """
-        print(D)
-        print(D_sqrt)
-        
-        """
-        """
-        # Identify the optimal number of clusters as the index corresponding
-        # to the larger gap between eigen values
-        index_largest_gap = np.argmax(np.diff(eigenvalues))
-        n_clusters = index_largest_gap + 1
-        n_clusters = 0
-        for val in eigenvalues:
-            if np.abs(val - 1) < 10**(-3):
-                n_clusters += 1
-        """
-        """
-        clustering = np.zeros(self.m, dtype=int)
-        for j in range(0, self.m):
-            if v2[j] > 0:
-                clustering[j] = 1
-        """
 
         n_clusters = max_clusters-min_clusters+1
         errors = np.zeros(n_clusters)
