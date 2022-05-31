@@ -10,9 +10,8 @@ MIN_CENTROID_CHANGE = 10**(-3)
 INF = 10**10
 
 class KMeansClustering: 
-    def __init__(self, X, y):
+    def __init__(self, X):
         self.X = np.copy(X)
-        self.y = np.copy(y)
 
     def scale_data(self):
         v = np.asarray(np.var(self.X, axis = 0)).flatten()
@@ -74,10 +73,11 @@ class KMeansClustering:
             S += (b-a)/np.amax([a, b])
         return S/self.m
 
-    def doit(self, min_clusters, max_clusters, use_sil=False):
+    def doit(self, min_clusters, max_clusters, use_sil=False, scale=True):
         self.n = self.X.shape[1]
         self.m = self.X.shape[0]
-        self.scale_data()
+        if scale:
+            self.scale_data()
         n_clusters = max_clusters-min_clusters+1
         cluster_id = np.zeros(self.m, dtype=int) 
         smallest_error = np.full(n_clusters, INF)
@@ -126,7 +126,7 @@ class KMeansClustering:
             
             for k in range(min_clusters, max_clusters+1):
                 sil[k-min_clusters] = self.calc_sil(k, D, min_clusters, best_clustering)
-                if sil[k-min_clusters] > sil[best_k-min_clusters]:
+                if sil[k-min_clusters] >= sil[best_k-min_clusters]:
                     best_k = k
         else:
             whole_change = smallest_error[0] - smallest_error[n_clusters-1]    
